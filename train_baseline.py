@@ -29,6 +29,7 @@ if __name__ == '__main__':
     config.read(args.cfg)
 
     encoder = model.Encoder(config)
+    encoder.apply(weights_init)
     # generator = model.Generator(config) 
     # discriminator = model.Discriminator(config)
     if args.gpu:
@@ -39,14 +40,18 @@ if __name__ == '__main__':
     # generator = generator.train()
     # discriminator = discriminator.train()
 
-    optimizer = optim.Adam(encoder.parameters(), lr=float(config['train']['lr']))
-    optimizers_E = {}
+    # optimizer = optim.Adam(encoder.parameters(), lr=float(config['train']['lr']), 
+    # weight_decay=float(config['train']['weight_decay']))
+
+    optimizer = optim.SGD(encoder.parameters(), lr=float(config['train']['lr']), 
+    weight_decay=float(config['train']['weight_decay']))
+    # optimizers_E = {}
     # optimizers_G = {}
     # optimizers_D = {}
-    params = {}
-    for m in config['modals']:
-        params[m] = [d for n, d in encoder.named_parameters() if m in str(n)]
-        optimizers_E[m] = optim.Adam(params[m], lr=float(config['train']['lr']))
+    # params = {}
+    # for m in config['modals']:
+    #     params[m] = [d for n, d in encoder.named_parameters() if m in str(n)]
+    #     optimizers_E[m] = optim.Adam(params[m], lr=float(config['train']['lr']))
         # params = [d for n, d in generator.named_parameters() if m in str(n)] 
         # optimizers_G[m] = optim.Adam(params, lr=float(config['train']['lr']))
         # params = [d for n, d in discriminator.named_parameters() if m in str(n)]
@@ -54,18 +59,18 @@ if __name__ == '__main__':
 
     scheduler = optim.lr_scheduler.StepLR(optimizer, int(config['train']['step_size']), 
                                 gamma=float(config['train']['gamma']))
-    scheduler_E = {}
+    # scheduler_E = {}
     # scheduler_G = {}
     # scheduler_D = {}
-    for m in config['modals']:
-        scheduler_E[m] = optim.lr_scheduler.StepLR(optimizers_E[m], int(config['train']['step_size']), 
-                                gamma=float(config['train']['gamma']))
+    # for m in config['modals']:
+    #     scheduler_E[m] = optim.lr_scheduler.StepLR(optimizers_E[m], int(config['train']['step_size']), 
+    #                             gamma=float(config['train']['gamma']))
         # scheduler_G[m] = optim.lr_scheduler.StepLR(optimizers_G[m], int(config['train']['step_size']), 
         #                         gamma=float(config['train']['gamma']))                                
         # scheduler_D[m] = optim.lr_scheduler.StepLR(optimizers_D[m], int(config['train']['step_size']), 
         #                         gamma=float(config['train']['gamma']))
 
-    trainset = dataset.xmedia(config)
+    trainset = dataset.xmedia_new(config)
     testset = dataset.xmedia_test(config)
 
     rounds = trainset.trainsize // trainset.batch_size
@@ -92,7 +97,6 @@ if __name__ == '__main__':
 
     for i in range(int(config['train']['epoch'])):
         
-        scheduler.step()
         # for a in scheduler_E.values():
         #    a.step()
         # for b in scheduler_G.values():
@@ -104,6 +108,8 @@ if __name__ == '__main__':
         for times in range(int(config['train']['d_epoch'])):
             encoder.train()
             trainset.cnt = 0
+            if times % 12 == 0:
+                scheduler.step()
 
             for j in range(rounds):
                 
@@ -136,7 +142,7 @@ if __name__ == '__main__':
                     r = 0.0
                     for t in encoder.parameters():
                         r += (t*t).sum()
-                    loss_E = dist.mean() + r * float(config['train']['weight_decay'])
+                    loss_E = dist.mean()#  + r * float(config['train']['weight_decay'])
 
                     if i > 5:
                         q = 0.0
@@ -152,7 +158,7 @@ if __name__ == '__main__':
                     if j % int(config['train']['print']) == 0:
                         print('Training Epoch: {epoch} {round} [{trained_samples}/{total_samples}]\t {modal} Loss_E: {:0.4f} {:0.4f}\t'.format(
                             loss_E,
-                            r,
+                            r*0.0005,
                             modal = m,
                             epoch=i,
                             round=times,

@@ -24,8 +24,7 @@ class Encoder(nn.Module):
 
         for m, d in cfg['modals'].items():
             self.networks.update({m: self.buildNet(int(d), int(cfg['parameters']['dim_hid']), int(cfg['parameters']['dim_out']))})
-
-
+    
     def buildNet(self, dim_In, dim_Hid, dim_Out):
         return nn.Sequential(
             nn.Linear(dim_In, dim_Hid),

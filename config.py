@@ -8,7 +8,7 @@ config['parameters'] = {'dim_hid':4096, 'dim_out':32, 'dim_ran':128}
 
 config['dataset'] = {'test_size':1000, 'train_size':4000, 'batch_size':64, 'kx':10}
 
-config['train'] = {'epoch':31, 'd_epoch':120, 'lr':0.0005, 'step_size':1, 'gamma': 0.1, 'train_encoder': 2, 'train_generator': 2,
+config['train'] = {'epoch':31, 'd_epoch':120, 'lr':0.011, 'step_size':1, 'gamma': 0.1, 'train_encoder': 2, 'train_generator': 2,
                     'weight_decay':0.0005,
                     'beta':1.0, 'save_epoch':100, 'print': 20, 
                     'l_df':0.1, 'l_dt':0.4, 'l_di':1.2, 'l_gf':0.2, 'l_gi':1.2, 

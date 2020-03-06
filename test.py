@@ -64,11 +64,20 @@ def test(encoder, gpu, testset, label):
     database = toBinary(database, gpu)
 
     # test = torch.cat(test.values(), 0).numpy()
-    database_f = torch.cat(tuple(database.values()), 0).cpu().numpy()
-    database_label = torch.cat(tuple(totensor(testset.database_label).values()), 0).cpu().numpy()
+    database_f = []
+    database_label = []
 
-    print(database_label.size)
-    print(database_f.size)
+    database_l = totensor(testset.database_label)
+
+    for m in database.keys():
+        database_f.append(database[m])
+        database_label.append(database_l[m])
+
+    database_f = torch.cat(database_f, 0).cpu().numpy()
+    database_label = torch.cat(database_label, 0).cpu().numpy()
+
+    print(database_label.shape)
+    print(database_f.shape)
 
     res = {}
     for m, d in test.items():

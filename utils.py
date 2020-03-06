@@ -1,7 +1,14 @@
 import torch
 import numpy as np
+import torch.nn as nn
 
-
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Linear') != -1:
+        nn.init.normal_(m.weight, std=0.9)
+        # nn.init.xavier_normal_(m.weight)
+        nn.init.constant_(m.bias, 0.0)
+    
 # trasform and computing
 def toBinary(v, gpu):
     ret = {}
