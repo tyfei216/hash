@@ -40,11 +40,11 @@ if __name__ == '__main__':
     # generator = generator.train()
     # discriminator = discriminator.train()
 
-    # optimizer = optim.Adam(encoder.parameters(), lr=float(config['train']['lr']), 
-    # weight_decay=float(config['train']['weight_decay']))
-
-    optimizer = optim.SGD(encoder.parameters(), lr=float(config['train']['lr']), 
+    optimizer = optim.Adam(encoder.parameters(), lr=float(0.0002), 
     weight_decay=float(config['train']['weight_decay']))
+
+    # optimizer = optim.SGD(encoder.parameters(), lr=float(config['train']['lr']), 
+    # weight_decay=float(config['train']['weight_decay']))
     # optimizers_E = {}
     # optimizers_G = {}
     # optimizers_D = {}
