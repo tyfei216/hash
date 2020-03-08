@@ -36,24 +36,29 @@ def count_map(test,data,test_lab,data_lab):
 
 	return np.mean(res)
 
-def MAP_ARGV(sess, config, encoder, test_feature, database_feature, test_label, database_label):
+def MAP_ARGV(sess, config, data, hash_code, test_feature, database_feature, test_label, database_label):
 
 	# test_feature = np.asarray(test_feature)
 	# database_feature = np.asarray(database_feature)
 	feed = {}
 	for m in config['modals'].keys():
-		feed[encoder.posdata[m]] = np.asarray(test_feature[m])
+		feed[data[m]] = np.asarray(test_feature[m])
 	#pdb.set_trace()
 
-	hash_test = sess.run(encoder.hash_code, feed_dict=feed)
+	hash_test = sess.run(hash_code, feed_dict=feed)
 	for m in config['modals'].keys():
-		feed[encoder.posdata[m]] = np.asarray(database_feature[m])
+		feed[data[m]] = np.asarray(database_feature[m])
 
-	hash_dataset = sess.run(encoder.hash_code,
-			 feed_dict = feed)
+	hash_dataset = sess.run(hash_code, feed_dict = feed)
 
-	data = np.concatenate(tuple(hash_dataset.values()))
-	data_lab = np.concatenate(tuple(database_label.values())).astype(int)
+	dh = []
+	dl = []
+	for m in config['modals'].keys():
+		dh.append(hash_dataset[m])
+		dl.append(database_label[m])
+	
+	data = np.concatenate(tuple(dh))
+	data_lab = np.concatenate(tuple(dl)).astype(int)
 
 #	test = np.concatenate((image_hash_test['I'],image_hash_test['T'],
 #		image_hash_test['A'],image_hash_test['V'],image_hash_test['D'],))

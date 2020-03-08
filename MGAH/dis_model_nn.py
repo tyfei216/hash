@@ -52,31 +52,36 @@ class DIS():
 			hash_sig_neg['D_neg'] = D_neg_sig
 		
 
-		pos_distance_I = self.compute_distance(hash_sig['I'],hash_sig)
-		neg_distance_I = self.compute_distance(hash_sig['I'],hash_sig_neg)
-		pos_distance_T = self.compute_distance(hash_sig['T'],hash_sig)
-		neg_distance_T = self.compute_distance(hash_sig['T'],hash_sig_neg)
-		pos_distance_D = self.compute_distance(hash_sig['D'],hash_sig)
-		neg_distance_D = self.compute_distance(hash_sig['D'],hash_sig_neg)
-		pos_distance_V = self.compute_distance(hash_sig['V'],hash_sig)
-		neg_distance_V = self.compute_distance(hash_sig['V'],hash_sig_neg)
-		pos_distance_A = self.compute_distance(hash_sig['A'],hash_sig)
-		neg_distance_A = self.compute_distance(hash_sig['A'],hash_sig_neg)
+		self.pos_distance_I = self.compute_distance(hash_sig['I'],hash_sig)
+		self.neg_distance_I = self.compute_distance(hash_sig['I'],hash_sig_neg)
+		self.pos_distance_T = self.compute_distance(hash_sig['T'],hash_sig)
+		self.neg_distance_T = self.compute_distance(hash_sig['T'],hash_sig_neg)
+		self.pos_distance_D = self.compute_distance(hash_sig['D'],hash_sig)
+		self.neg_distance_D = self.compute_distance(hash_sig['D'],hash_sig_neg)
+		self.pos_distance_V = self.compute_distance(hash_sig['V'],hash_sig)
+		self.neg_distance_V = self.compute_distance(hash_sig['V'],hash_sig_neg)
+		self.pos_distance_A = self.compute_distance(hash_sig['A'],hash_sig)
+		self.neg_distance_A = self.compute_distance(hash_sig['A'],hash_sig_neg)
 		
-		
+		'''
 		self.reward = {'I':0,'T':0,'D':0,'V':0,'A':0}
 		with tf.name_scope('svm_loss'):
 			self.loss_I_B = tf.reduce_mean(tf.maximum(0.0, beta + pos_distance_I - neg_distance_I))
 			self.regulation_loss = self.compute_regulation(weight_decay)
 			self.loss_I = self.loss_I_B + self.compute_regulation(weight_decay)
+			# self.loss_I = tf.Print(self.lossI, ['test', self.lossI], message="updating I")
 			self.loss_T_B = tf.reduce_mean(tf.maximum(0.0, beta + pos_distance_T - neg_distance_T))
 			self.loss_T = self.loss_T_B + self.compute_regulation(weight_decay)
+			# self.loss_T = tf.Print(self.lossT, ['test', self.lossT], message="updating T")
 			self.loss_D_B = tf.reduce_mean(tf.maximum(0.0, beta + pos_distance_D - neg_distance_D))
 			self.loss_D = self.loss_D_B + self.compute_regulation(weight_decay)
+			# self.loss_D = tf.Print(self.lossD, ['test', self.lossD], message="updating D")
 			self.loss_V_B = tf.reduce_mean(tf.maximum(0.0, beta + pos_distance_V - neg_distance_V))
 			self.loss_V = self.loss_V_B + self.compute_regulation(weight_decay)
+			# self.loss_V = tf.Print(self.lossV, ['test', self.lossV], message="updating V")
 			self.loss_A_B = tf.reduce_mean(tf.maximum(0.0, beta + pos_distance_A - neg_distance_A))
 			self.loss_A = self.loss_A_B + self.compute_regulation(weight_decay)
+			# self.loss_A = tf.Print(self.lossA, ['test', self.lossA], message="updating A")
 	
 			self.reward['I'] = tf.sigmoid(tf.maximum(0.0, beta + pos_distance_I - neg_distance_I))
 			self.reward['T'] = tf.sigmoid(tf.maximum(0.0, beta + pos_distance_T - neg_distance_T))
@@ -85,14 +90,20 @@ class DIS():
 			self.reward['A'] = tf.sigmoid(tf.maximum(0.0, beta + pos_distance_A - neg_distance_A))
 		
 		self.global_step = tf.Variable(0, trainable=False)
-		self.lr_step = tf.train.exponential_decay(learning_rate, self.global_step, 5000, 0.9, staircase=True)
-		self.optimizer = tf.train.AdamOptimizer(0.0002)
+		self.lr_step = tf.train.exponential_decay(learning_rate, self.global_step, 40, 0.7, staircase=True)
+		self.optimizer = tf.train.AdamOptimizer(self.lr_step)
 		
 		self.updates_I = self.optimizer.minimize(self.loss_I, var_list=[var for var in tf.trainable_variables()])
+		# self.updates_I = tf.Print(self.updatesI, ['test', self.updatesI], message="updating I")
 		self.updates_T = self.optimizer.minimize(self.loss_T, var_list=[var for var in tf.trainable_variables()])
+		# self.updates_T = tf.Print(self.updatesT, ['test', self.updatesT], message="updating T")
 		self.updates_D = self.optimizer.minimize(self.loss_D, var_list=[var for var in tf.trainable_variables()])
+		# self.updates_D = tf.Print(self.updatesD, ['test', self.updatesD], message="updating D")
 		self.updates_V = self.optimizer.minimize(self.loss_V, var_list=[var for var in tf.trainable_variables()])
+		# self.updates_V = tf.Print(self.updatesV, ['test', self.updatesV], message="updating V")
 		self.updates_A = self.optimizer.minimize(self.loss_A, var_list=[var for var in tf.trainable_variables()])
+		# self.updates_A = tf.Print(self.updatesA, ['test', self.updatesA], message="updating A")
+		'''
 		
 
 		

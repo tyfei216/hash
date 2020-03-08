@@ -70,6 +70,15 @@ def make_test_dict(query_list, url_list, query_label, url_label, label_dim):
 				push_query(query, url, query_url)
 	return query_url, query_pos	
 
+def standard(a):
+	print(a.size, a.shape)
+	mu = np.mean(a, axis=0)
+	sigma = np.std(a, axis=0)
+	a = (a - mu)/(2*sigma + 0.00001)
+	a[a>1.0] = 1.0
+	a[a<-1.0] = -1.0
+	return a
+
 def load_all_query_url(config, feature_dir,list_dir, label_dim):
 
 	test_feature = {}
@@ -88,7 +97,9 @@ def load_all_query_url(config, feature_dir,list_dir, label_dim):
 			
 			feature_float = np.asarray(feature_float)
 			feature_list.append(feature_float)
-
+			
+		feature_list = np.asarray(feature_list)
+		feature_list = standard(feature_list)
 		test_feature[modal] = feature_list
 		
 	for modal in config['modals'].keys():
@@ -130,11 +141,12 @@ def load_all_query_url(config, feature_dir,list_dir, label_dim):
 			
 			feature_float = np.asarray(feature_float)
 			feature_list.append(feature_float)
-
+		
+		feature_list = np.asarray(feature_list)
+		feature_list = standard(feature_list)
 		database_label[modal] = feature_list
 		
 	return test_feature,database_feature,test_label,database_label
-
 
 
 	train_img = open(list_dir + 'train_img.txt', 'r').read().split('\r\n')
@@ -178,6 +190,8 @@ def load_train_feature(config, feature_dir):
 			feature_float = np.asarray(feature_float)
 			feature_list.append(feature_float)
 
+		feature_list = np.asarray(feature_list)
+		feature_list = standard(feature_list)
 		train_feature[modal] = feature_list
 
 	return train_feature

@@ -21,11 +21,11 @@ Kx = 10
 SELECTNUM = 1
 SAMPLERATIO = 10
 
-WHOLE_EPOCH = 60
-D_EPOCH = 200
+WHOLE_EPOCH = 80
+D_EPOCH = 20
 G_EPOCH = 2
 GS_EPOCH = 30
-D_DISPLAY = 100
+D_DISPLAY = 3
 G_DISPLAY = 10
 
 I_DIM = 4096
@@ -40,9 +40,9 @@ MODAL_NUM = 5
 TRAIN_NUM = 4000
 BATCH_SIZE = 16
 WEIGHT_DECAY = 0.0005
-D_LEARNING_RATE = 0.0005
+D_LEARNING_RATE = 0.0002
 LAMBDA = 0
-BETA = 1.0
+BETA = 1.5
 GAMMA = 0.1
 
 WORKDIR = '../'
@@ -91,7 +91,7 @@ def generate_samples(fix):
 	random.shuffle(data)
 	return data
 
-def train_discriminator(sess, discriminator, dis_train_list, tag = 'I'):
+def train_discriminator(sess, discriminator, dis_train_list, global_step, tag = 'I'):
 	train_size = len(dis_train_list)
 	index = 1
 	#print train_size
@@ -127,37 +127,40 @@ def train_discriminator(sess, discriminator, dis_train_list, tag = 'I'):
 		       discriminator.T_neg_data: input_data[6],
 		       discriminator.A_neg_data: input_data[7],
 		       discriminator.V_neg_data: input_data[8],
-		       discriminator.D_neg_data: input_data[9]
+		       discriminator.D_neg_data: input_data[9],
+			   discriminator.global_step:global_step
 			   }
 
 		if tag=='I':
-			l, rl, _d, d_loss = sess.run([discriminator.loss_I_B, discriminator.regulation_loss, discriminator.updates_I, discriminator.loss_I],feed_dict=dict)
+			l, rl, _d, d_loss, lr = sess.run([discriminator.loss_I_B, discriminator.regulation_loss, discriminator.updates_I, discriminator.loss_I, discriminator.lr_step],feed_dict=dict)
 		if tag=='T':
-			l, rl, _d, d_loss = sess.run([discriminator.loss_T_B, discriminator.regulation_loss, discriminator.updates_T, discriminator.loss_T],feed_dict=dict)
+			l, rl, _d, d_loss, lr = sess.run([discriminator.loss_T_B, discriminator.regulation_loss, discriminator.updates_T, discriminator.loss_T, discriminator.lr_step],feed_dict=dict)
 		if tag=='A':
-			l, rl, _d, d_loss = sess.run([discriminator.loss_A_B, discriminator.regulation_loss, discriminator.updates_A, discriminator.loss_A],feed_dict=dict)
+			l, rl, _d, d_loss, lr = sess.run([discriminator.loss_A_B, discriminator.regulation_loss, discriminator.updates_A, discriminator.loss_A, discriminator.lr_step],feed_dict=dict)
 		if tag=='V':
-			l, rl, _d, d_loss = sess.run([discriminator.loss_V_B, discriminator.regulation_loss, discriminator.updates_V, discriminator.loss_V],feed_dict=dict)
+			l, rl, _d, d_loss, lr = sess.run([discriminator.loss_V_B, discriminator.regulation_loss, discriminator.updates_V, discriminator.loss_V, discriminator.lr_step],feed_dict=dict)
 		if tag=='D':
-			l, rl, _d, d_loss = sess.run([discriminator.loss_D_B, discriminator.regulation_loss, discriminator.updates_D, discriminator.loss_D],feed_dict=dict)
+			l, rl, _d, d_loss, lr = sess.run([discriminator.loss_D_B, discriminator.regulation_loss, discriminator.updates_D, discriminator.loss_D, discriminator.lr_step],feed_dict=dict)
 
-	print('D_Loss_%s: %.4f %.4f %.4f' % (tag, d_loss, rl, l))
-	return discriminator
+	print('D_Loss_%s: %.4f %.4f %.4f lr rate: %.8f' % (tag, d_loss, rl, l, lr))
+	# return discriminator
 
 def main():
 	discriminator = DIS(I_DIM, T_DIM, A_DIM, V_DIM, D_DIM, HIDDEN_DIM, OUTPUT_DIM, WEIGHT_DECAY, D_LEARNING_RATE, BETA, GAMMA)
 	#generator = GEN(I_DIM, T_DIM, A_DIM, V_DIM, D_DIM, HIDDEN_DIM, OUTPUT_DIM, WEIGHT_DECAY, D_LEARNING_RATE, BETA, GAMMA)
-
+	
 	config = tf.ConfigProto(allow_soft_placement=True)
 	config.gpu_options.allow_growth = True
 	sess = tf.Session(config=config)
 	sess.run(tf.initialize_all_variables())
 
+	
+
 	# pdb.set_trace()
 
 	saver = tf.train.Saver(var_list=[var for var in tf.trainable_variables()])
 	# saver.restore(sess, DIS_MODEL_NEWEST_FILE)
-
+	sess.graph.finalize()
 	print('start adversarial training')
 	#map_best_val_gen = 0.0
 	map_best_val_dis = 0.0
@@ -174,19 +177,21 @@ def main():
 				dis_train_list_V = generate_samples(3)
 				dis_train_list_A = generate_samples(4)
 
-			discriminator = train_discriminator(sess, discriminator, dis_train_list_I, 'I')
-			discriminator = train_discriminator(sess, discriminator, dis_train_list_T, 'T')
-			discriminator = train_discriminator(sess, discriminator, dis_train_list_D, 'D')
-			discriminator = train_discriminator(sess, discriminator, dis_train_list_V, 'V')
-			discriminator = train_discriminator(sess, discriminator, dis_train_list_A, 'A')
+			global_step = epoch * D_EPOCH + d_epoch
+			train_discriminator(sess, discriminator, dis_train_list_I, global_step, 'I')
+			train_discriminator(sess, discriminator, dis_train_list_T, global_step, 'T')
+			train_discriminator(sess, discriminator, dis_train_list_D, global_step, 'D')
+			train_discriminator(sess, discriminator, dis_train_list_V, global_step, 'V')
+			train_discriminator(sess, discriminator, dis_train_list_A, global_step, 'A')
+			# print(discriminator.lr_step)
 
-			if (d_epoch + 1) % (D_DISPLAY) == 0:
-				test_map = MAP_ARGV(sess, discriminator, test_feature, database_feature, test_label, database_label, OUTPUT_DIM)
-				print('Test_MAP: %.4f' % test_map)
-				if test_map > map_best_val_dis:
-					map_best_val_dis = test_map
-					saver.save(sess, DIS_MODEL_BEST_FILE)
-			saver.save(sess, DIS_MODEL_NEWEST_FILE)
+		if (epoch + 1) % (D_DISPLAY) == 0:
+			test_map = MAP_ARGV(sess, discriminator, test_feature, database_feature, test_label, database_label, OUTPUT_DIM)
+			print('Test_MAP: %.4f' % test_map)
+			if test_map > map_best_val_dis:
+				map_best_val_dis = test_map
+				saver.save(sess, DIS_MODEL_BEST_FILE)
+		saver.save(sess, DIS_MODEL_NEWEST_FILE)
 
 
 	sess.close()

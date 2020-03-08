@@ -31,19 +31,31 @@ def args_parse():
 
 def init_network(config, lr_step):
     
-    encoder = model_tf.Encoder(config)
+    posdata = {}
+    negdata = {}
+
+    for m, d in config['modals'].items():
+        posdata[m] = tf.placeholder(tf.float32, shape=[None, int(d)], name=m+"_data")
+        negdata[m] = tf.placeholder(tf.float32, shape=[None, int(d)], name=m+"_data")
+    
+    hash_sig_pos, hash_code_pos = model_tf.Encoder(config, posdata, reuse=False)
+    hash_sig_neg, hash_code_neg = model_tf.Encoder(config, negdata, reuse=True)
+    
     loss={}
     for m in config['modals'].keys():
-        loss[m] = loss_tf.triplet_loss(config, encoder.hash_sig, encoder.hash_sig_neg, m) 
-    varlist = [var for var in tf.trainable_variables()]
+        loss[m] = loss_tf.triplet_loss(config, hash_sig_pos, hash_sig_neg, m) 
+    
+    varlist = tf.get_collection(
+        tf.GraphKeys.TRAINABLE_VARIABLES, scope='encoder')
     
     update = {}
     for m in config['modals'].keys():
-        update[m] = loss_tf.Adamstep(config, loss[m] + encoder.compute_regulation(float(config['train']['weight_decay'])), varlist, lr_step)
+        update[m] = loss_tf.Adamstep(config, loss[m] + model_tf.compute_regulation(float(config['train']['weight_decay']), 'encoder'), varlist, lr_step)
+        # update[m] = loss_tf.Adamstep(config, loss[m], varlist, lr_step)
     
-    return encoder, loss, update
+    return posdata, negdata, loss, update, hash_code_pos, hash_code_neg
 
-def train_encoder(sess, config, encoder, loss, update, global_step, lr_step, train_list, global_steps, tag):
+def train_encoder(sess, config, posdata, negdata, weight, loss, update, global_step, lr_step, train_list, global_steps, tag):
     train_size = int(config['dataset']['train_size'])
     index = 0
     BATCH_SIZE = int(config['dataset']['batch_size'])
@@ -54,24 +66,24 @@ def train_encoder(sess, config, encoder, loss, update, global_step, lr_step, tra
             for qx in train_list.keys():
                 qua = train_list[qx][index:index+BATCH_SIZE]
                 if '_neg' in qx:
-                    feed[encoder.negdata[qx[:-4]]] = np.asarray(qua)
+                    feed[negdata[qx[:-4]]] = np.asarray(qua)
                 else:
-                    feed[encoder.posdata[qx]] = np.asarray(qua)
+                    feed[posdata[qx]] = np.asarray(qua)
         else:
             for qx in train_list.keys():
                 qua = train_list[qx][index:]
                 if '_neg' in qx:
-                    feed[encoder.negdata[qx[:-4]]] = np.asarray(qua)
+                    feed[negdata[qx[:-4]]] = np.asarray(qua)
                 else:
-                    feed[encoder.posdata[qx]] = np.asarray(qua)
+                    feed[posdata[qx]] = np.asarray(qua)
         
 
         index += BATCH_SIZE
         feed[global_step] = global_steps
         # print(feed)
-        _, lossE, weight, lr = sess.run([update[tag], loss[tag], encoder.regulation, lr_step], feed_dict = feed)
+        _, lossE, wei, lr = sess.run([update[tag], loss[tag], weight, lr_step], feed_dict = feed)
 
-    print('E_Loss_%s: %.4f %.4f %.8f' % (tag, lossE + weight, lossE, lr))
+    print('E_Loss_%s: %.4f %.4f %.8f' % (tag, lossE + wei, lossE, lr))
 
 if __name__ == '__main__':
 
@@ -81,7 +93,8 @@ if __name__ == '__main__':
     global_step = tf.Variable(0, trainable=False)
     lr_step = tf.train.exponential_decay(float(config['train']['lr']), global_step, int(config['train']['step']), float(config['train']['gamma']), staircase=True)
     
-    encoder, loss, update = init_network(config, lr_step)
+    posdata, negdata, loss, update, hash_code_pos, hash_code_neg = init_network(config, lr_step)
+    weight = model_tf.compute_regulation(float(config['train']['weight_decay']), 'encoder')
     test_feature,database_feature,test_label,database_label,train_feature,knn_idx = dataset_tf.xmedia(config)
 
     cf = tf.ConfigProto(allow_soft_placement=True)
@@ -90,7 +103,8 @@ if __name__ == '__main__':
     init = tf.global_variables_initializer()
     sess.run(init)
 
-    varlist = [var for var in tf.trainable_variables()]
+    varlist = tf.get_collection(
+        tf.GraphKeys.TRAINABLE_VARIABLES, scope='encoder')
     saver = tf.train.Saver(var_list=varlist)
 
     map_best_val = 0.0
@@ -106,11 +120,12 @@ if __name__ == '__main__':
                     train_list[m] = utils_tf.generate_samples(config, m, train_feature, knn_idx)
 
             for m in config['modals'].keys():
-                train_encoder(sess, config, encoder, loss, update, global_step, 
+                train_encoder(sess, config, posdata, negdata, weight, loss, update, global_step, 
                     lr_step, train_list[m], epoch*int(config['train']['d_epoch']) + d_epoch, m)
 
         if (epoch + 1) % int(config['train']['print']) == 0:
-            test_map = MAP_ARGV(sess, config, encoder, test_feature, database_feature, test_label, database_label)
+            test_map = MAP_ARGV(sess, config, posdata, hash_code_pos, test_feature, database_feature, test_label, database_label)
+            print(test_map)
             if test_map > map_best_val:
                 map_best_val = test_map
                 saver.save(sess, checkpoint_path.format(net='encoder', name='best'))

@@ -1,6 +1,7 @@
 import configparser
 import tensorflow as tf
 
+'''
 class Encoder():
     def __init__(self, config):
 
@@ -73,3 +74,70 @@ class Encoder():
         for item in var_list:
             result += tf.nn.l2_loss(item)
         return weight_decay * result
+'''
+
+def build_layer(x, out_dim, scope = 'fc'):
+    with tf.variable_scope(scope):
+        w = tf.get_variable(
+            'w', [x.get_shape()[-1], out_dim],
+            initializer=tf.truncated_normal_initializer(stddev=0.1))
+
+        biases = tf.get_variable(
+            'biases', [out_dim], initializer=tf.constant_initializer(0.0))
+
+        output = tf.nn.bias_add(tf.matmul(x, w), biases)
+
+        return output
+
+def compute_regulation(weight_decay, scope):
+    result = 0.0
+    var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+    for item in var_list:
+        result += tf.nn.l2_loss(item)
+    return weight_decay * result
+
+def Encoder(config, feature, reuse = False):
+    with tf.variable_scope('encoder', reuse = reuse,):  
+        # regularizer=tf.contrib.layers.l2_regularizer(0.1)):
+        hash_sig = {}
+        hash_code = {}
+        for m in config['modals'].keys():
+            l1 = tf.nn.tanh(build_layer(feature[m], int(config['parameters']['dim_hid']), 'fc1'+m))
+            hash_sig[m] = tf.sigmoid(build_layer(l1, int(config['parameters']['dim_out']), 'fc2'+m))
+            hash_code[m] = tf.cast(hash_sig[m] + 0.5, tf.int32)
+
+    return hash_sig, hash_code
+
+def Encoder_new(config, feature, reuse = False):
+    with tf.variable_scope('encoder', reuse = reuse,):  
+        # regularizer=tf.contrib.layers.l2_regularizer(0.1)):
+        hash_sig = {}
+        hash_code = {}
+        for m in config['modals'].keys():
+            l0 = tf.nn.relu(build_layer(feature[m], int(config['modals'][m], fc='fc0'+m)))
+            l1 = tf.nn.tanh(build_layer(l0, int(config['parameters']['dim_hid']), 'fc1'+m))
+            hash_sig[m] = tf.sigmoid(build_layer(l1, int(config['parameters']['dim_out']), 'fc2'+m))
+            hash_code[m] = tf.cast(hash_sig[m] + 0.5, tf.int32)
+
+    return hash_sig, hash_code
+
+def generator(config, hash_code, z, reuse = False):
+    with tf.variable_scope('generator', reuse=reuse):
+        generated_feature = {}
+        for m in config['modals'].keys():
+            z_labels = tf.concat(1, [z, hash_code[m]])
+            first = tf.nn.leaky_relu(build_layer(z_labels, int(config['parameters']['dim_hid']), scope='fc1'+m), alpha=0.1)
+            second = tf.nn.leaky_relu(build_layer(first, int(config['modals'][m]), scope='fc2'+m), alpha=0.1)
+            generated_feature[m] = tf.nn.tanh(build_layer(second, int(config['modals'][m]), scope='fc3'+m))
+    
+    return generated_feature
+
+def discriminator(config, feature, reuse = False):
+    with tf.variable_scope('discriminator', reuse=reuse):
+        source_logits = {}
+        class_logits = {}
+        for m in config['modals'].keys():
+            first = tf.nn.relu(build_layer(feature[m], int(config['parameter']['dim_hid'], scope='fc1'+m)))
+
+
+        
