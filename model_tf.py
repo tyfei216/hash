@@ -114,30 +114,31 @@ def Encoder_new(config, feature, reuse = False):
         hash_sig = {}
         hash_code = {}
         for m in config['modals'].keys():
-            l0 = tf.nn.relu(build_layer(feature[m], int(config['modals'][m], fc='fc0'+m)))
+            l0 = tf.nn.relu(build_layer(feature[m], int(config['modals'][m]), 'fc0'+m))
             l1 = tf.nn.tanh(build_layer(l0, int(config['parameters']['dim_hid']), 'fc1'+m))
             hash_sig[m] = tf.sigmoid(build_layer(l1, int(config['parameters']['dim_out']), 'fc2'+m))
             hash_code[m] = tf.cast(hash_sig[m] + 0.5, tf.int32)
 
     return hash_sig, hash_code
 
-def generator(config, hash_code, z, reuse = False):
+def Generator(config, hash_code, z, reuse = False):
     with tf.variable_scope('generator', reuse=reuse):
         generated_feature = {}
         for m in config['modals'].keys():
-            z_labels = tf.concat(1, [z, hash_code[m]])
-            first = tf.nn.leaky_relu(build_layer(z_labels, int(config['parameters']['dim_hid']), scope='fc1'+m), alpha=0.1)
-            second = tf.nn.leaky_relu(build_layer(first, int(config['modals'][m]), scope='fc2'+m), alpha=0.1)
-            generated_feature[m] = tf.nn.tanh(build_layer(second, int(config['modals'][m]), scope='fc3'+m))
+            z_labels = tf.concat(1, [z, hash_code])
+            first = tf.nn.leaky_relu(build_layer(z_labels, int(config['parameters']['dim_hid']), 'fc1'+m), alpha=0.1)
+            second = tf.nn.leaky_relu(build_layer(first, int(config['modals'][m]), 'fc2'+m), alpha=0.1)
+            generated_feature[m] = tf.nn.tanh(build_layer(second, int(config['modals'][m]), 'fc3'+m))
     
     return generated_feature
 
-def discriminator(config, feature, reuse = False):
+def Discriminator(config, feature, reuse = False):
     with tf.variable_scope('discriminator', reuse=reuse):
         source_logits = {}
-        class_logits = {}
+        hash_logits = {}
         for m in config['modals'].keys():
-            first = tf.nn.relu(build_layer(feature[m], int(config['parameter']['dim_hid'], scope='fc1'+m)))
-
-
-        
+            first = tf.nn.relu(build_layer(feature[m], int(config['parameters']['dim_hid']), 'fc1'+m))
+            second = tf.nn.relu(build_layer(first, int(config['parameters']['dim_hid']), 'fc2'+m))
+            source_logits[m] = build_layer(second, 1, 'sl'+m)
+            hash_logits[m] = build_layer(second, int(config['parameters']['dim_out']), 'cl'+m)
+    return source_logits, hash_logits        

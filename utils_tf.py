@@ -113,7 +113,9 @@ def load_all_query_url(config, feature_dir,list_dir, label_dim):
 			
 			feature_float = np.asarray(feature_float)
 			feature_list.append(feature_float)
-
+		
+		feature_list = np.asarray(feature_list)
+		feature_list = standard(feature_list)
 		database_feature[modal] = feature_list
 
 	for modal in config['modals'].keys():
@@ -143,7 +145,7 @@ def load_all_query_url(config, feature_dir,list_dir, label_dim):
 			feature_list.append(feature_float)
 		
 		feature_list = np.asarray(feature_list)
-		feature_list = standard(feature_list)
+		# feature_list = standard(feature_list)
 		database_label[modal] = feature_list
 		
 	return test_feature,database_feature,test_label,database_label
@@ -245,6 +247,14 @@ def get_batch_data(file, index, size):
 		neg.append([float(x) for x in line[1].split(',')])
 	return pos, neg
 
+def get_hash_code(v):
+	cnt = 0.0
+	ret = 0.0
+	for i in v.values():
+		cnt += 1
+		ret += i
+	ret /= cnt
+	ret = np.asarray(ret + 0.5).astype(np.int32).astype(np.float32)
 
 def generate_samples(config, fix, train_feature, knn_idx):
 	data = {}

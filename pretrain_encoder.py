@@ -50,7 +50,7 @@ def init_network(config, lr_step):
     
     update = {}
     for m in config['modals'].keys():
-        update[m] = loss_tf.Adamstep(config, loss[m] + model_tf.compute_regulation(float(config['train']['weight_decay']), 'encoder'), varlist, lr_step)
+        update[m] = loss_tf.Adamstep(config, loss[m] + model_tf.compute_regulation(float(config['train']['weight_decay']), 'encoder'), varlist, lr_step, 0.9)
         # update[m] = loss_tf.Adamstep(config, loss[m], varlist, lr_step)
     
     return posdata, negdata, loss, update, hash_code_pos, hash_code_neg
