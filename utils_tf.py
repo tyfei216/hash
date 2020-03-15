@@ -70,13 +70,41 @@ def make_test_dict(query_list, url_list, query_label, url_label, label_dim):
 				push_query(query, url, query_url)
 	return query_url, query_pos	
 
+def standard_all(a, b, c):
+	for m in a.keys():
+		aa = a[m]
+		bb = b[m]
+		cc = c[m]
+		d = np.concatenate((aa,bb,cc), axis=0)
+		s = standard2(d)
+		a[m] = s[:aa.shape[0]]
+		b[m] = s[aa.shape[0]:aa.shape[0]+bb.shape[0]]
+		c[m] = s[aa.shape[0]+bb.shape[0]:]
+		print(a[m].shape, b[m].shape, c[m].shape)
+	
+	return a, b, c
+
 def standard(a):
+	return a
 	print(a.size, a.shape)
 	mu = np.mean(a, axis=0)
 	sigma = np.std(a, axis=0)
-	a = (a - mu)/(2*sigma + 0.00001)
+	a = (a - mu)
+	amax = abs(a).max(0)
+	a = a/(amax+0.0001)
+	print(len(a[a>1.0]), len(a[a<-1.0]))
 	a[a>1.0] = 1.0
 	a[a<-1.0] = -1.0
+	return a
+
+def standard2(a):
+	print(a.size, a.shape)
+	amax = a.max(0)
+	amin = a.min(0)
+	a = (a - amin)/(amax-amin+0.00001)*2-1
+	a[a>1.0] = 1.0
+	a[a<-1.0] = -1.0
+	print(len(a[a>1.0]), len(a[a<-1.0]))
 	return a
 
 def load_all_query_url(config, feature_dir,list_dir, label_dim):
@@ -248,13 +276,15 @@ def get_batch_data(file, index, size):
 	return pos, neg
 
 def get_hash_code(v):
+	# print(v)
 	cnt = 0.0
 	ret = 0.0
 	for i in v.values():
 		cnt += 1
 		ret += i
-	ret /= cnt
+	ret = ret.astype(np.float32)/cnt
 	ret = np.asarray(ret + 0.5).astype(np.int32).astype(np.float32)
+	return ret
 
 def generate_samples(config, fix, train_feature, knn_idx):
 	data = {}

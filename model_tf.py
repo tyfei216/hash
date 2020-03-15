@@ -125,9 +125,9 @@ def Generator(config, hash_code, z, reuse = False):
     with tf.variable_scope('generator', reuse=reuse):
         generated_feature = {}
         for m in config['modals'].keys():
-            z_labels = tf.concat(1, [z, hash_code])
-            first = tf.nn.leaky_relu(build_layer(z_labels, int(config['parameters']['dim_hid']), 'fc1'+m), alpha=0.1)
-            second = tf.nn.leaky_relu(build_layer(first, int(config['modals'][m]), 'fc2'+m), alpha=0.1)
+            z_labels = tf.concat([hash_code, z], 1)
+            first = tf.nn.relu(build_layer(z_labels, int(config['parameters']['dim_out'])*4, 'fc1'+m))
+            second = tf.nn.relu(build_layer(first, int(config['parameters']['dim_hid']), 'fc2'+m))
             generated_feature[m] = tf.nn.tanh(build_layer(second, int(config['modals'][m]), 'fc3'+m))
     
     return generated_feature
@@ -138,7 +138,7 @@ def Discriminator(config, feature, reuse = False):
         hash_logits = {}
         for m in config['modals'].keys():
             first = tf.nn.relu(build_layer(feature[m], int(config['parameters']['dim_hid']), 'fc1'+m))
-            second = tf.nn.relu(build_layer(first, int(config['parameters']['dim_hid']), 'fc2'+m))
+            second = tf.nn.relu(build_layer(first, int(config['parameters']['dim_hid'])//4, 'fc2'+m))
             source_logits[m] = build_layer(second, 1, 'sl'+m)
             hash_logits[m] = build_layer(second, int(config['parameters']['dim_out']), 'cl'+m)
     return source_logits, hash_logits        

@@ -10,13 +10,13 @@ def compute_distance(ot, sig_dict):
 def loss_dis(sig_dict, value):
     result = 0.0
     for i in sig_dict.values():
-        result += tf.reduce_sum(tf.square(i-value), 1)
+        result += tf.reduce_sum(tf.square(i-value))
     return result
 
 def quantization_loss(config, hash_sig, hash_code):
     result = 0.0
     for m in config['modals'].keys():
-        result += tf.reduce_sum(tf.square(hash_sig[m] - hash_code[m]), 1)
+        result += tf.reduce_sum(tf.square(hash_sig[m] - hash_code[m]))
     return result * float(config['train']['quantization'])
 
 def triplet_loss(config, hash_sig, hash_sig_neg, m):
@@ -33,32 +33,37 @@ def Adamstep(config, loss, params, lr_step, beta = 0.9):
 
     return updates
 
-def GANloss(reallabel, fakelabel, source_logits_real, hash_logits_real, source_logits_fake,
+def GANloss(config, reallabel, fakelabel, source_logits_real, hash_logits_real, source_logits_fake,
          hash_logits_fake):
 
+    g_loss = 0.0
+    d_loss = 0.0
+    ones = tf.ones_like(source_logits_real['img'])
+    zeros = tf.zeros_like(source_logits_real['img'])
 
-    source_loss_real = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(
-            source_logits_real, tf.ones_like(source_logits_real)))
+    for m in source_logits_real.keys():
+        source_loss_real = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=source_logits_real[m], labels=ones))
 
-    source_loss_fake = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(
-            source_logits_fake, tf.zeros_like(source_logits_fake)))
+        source_loss_fake = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=source_logits_fake[m], labels=zeros))
 
-    g_loss = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(
-            source_logits_fake, tf.ones_like(source_logits_fake)))
+        hash_loss_gen = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=source_logits_fake[m], labels=ones))
 
-    hash_loss_real = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(hash_logits_real,
-                                                reallabel))
-    hash_loss_fake = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(hash_logits_fake,
-                                                fakelabel))
+        hash_loss_real = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(logits=hash_logits_real[m],
+                                                    labels=reallabel))
+        hash_loss_fake = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(logits=hash_logits_fake[m],
+                                                    labels=fakelabel))
 
-    d_loss = source_loss_real + source_loss_fake + hash_loss_real + hash_loss_fake
+        d_loss += float(config['parameters']['dim_out'])*(source_loss_real + source_loss_fake) + hash_loss_real + hash_loss_fake
 
-    g_loss =  g_loss + hash_loss_real + hash_loss_fake
+        g_loss += float(config['parameters']['dim_out'])*hash_loss_gen + hash_loss_real + hash_loss_fake
 
     return d_loss, g_loss
 
