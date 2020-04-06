@@ -85,13 +85,12 @@ def standard_all(a, b, c):
 	return a, b, c
 
 def standard(a):
-	return a
+	# return a
 	print(a.size, a.shape)
 	mu = np.mean(a, axis=0)
 	sigma = np.std(a, axis=0)
 	a = (a - mu)
-	amax = abs(a).max(0)
-	a = a/(amax+0.0001)
+	a = a/(sigma*4 + 0.00000001)
 	print(len(a[a>1.0]), len(a[a<-1.0]))
 	a[a>1.0] = 1.0
 	a[a<-1.0] = -1.0
@@ -282,8 +281,10 @@ def get_hash_code(v):
 	for i in v.values():
 		cnt += 1
 		ret += i
+	#print('cnt', cnt)
 	ret = ret.astype(np.float32)/cnt
 	ret = np.asarray(ret + 0.5).astype(np.int32).astype(np.float32)
+	#print(ret[0])
 	return ret
 
 def generate_samples(config, fix, train_feature, knn_idx):
@@ -314,5 +315,37 @@ def generate_samples(config, fix, train_feature, knn_idx):
 				while k in knn_idx[j][i]:
 					k = random.randint(0,TRAIN_NUM-1)
 				data[j+'_neg'].append(train_feature[j][k])
+
+	return data
+
+def generate_samples2(config, fix, train_feature, knn_idx):
+	data = {}
+	TRAIN_NUM = int(config['dataset']['train_size'])
+	Kx = int(config['dataset']['kx'])
+	#pdb.set_trace()
+	rand = [i for i in range(TRAIN_NUM)]
+	random.shuffle(rand)
+	for m in config['modals'].keys():
+		data[m+"0"] = []
+		data[m+"1"] = []
+		data[m+"2"] = []
+		
+	for index in range(TRAIN_NUM):
+		i = rand[index]
+		for j in config['modals'].keys():
+			if j==fix:
+				#print j,i
+				data[j+"0"].append(train_feature[j][i])
+				t_idx = random.randint(0,Kx-1)
+				data[j+"1"].append(train_feature[j][knn_idx[j][i][t_idx]])
+				t_idx = random.randint(0,Kx-1)
+				data[j+"2"].append(train_feature[j][knn_idx[j][i][t_idx]])
+			else:
+				t_idx = random.randint(0,Kx-1)
+				data[j+"0"].append(train_feature[j][knn_idx[j][i][t_idx]])
+				t_idx = random.randint(0,Kx-1)
+				data[j+"1"].append(train_feature[j][knn_idx[j][i][t_idx]])
+				t_idx = random.randint(0,Kx-1)
+				data[j+"2"].append(train_feature[j][knn_idx[j][i][t_idx]])
 
 	return data

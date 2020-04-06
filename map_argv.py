@@ -36,7 +36,7 @@ def count_map(test,data,test_lab,data_lab):
 
 	return np.mean(res)
 
-def MAP_ARGV(sess, config, data, hash_code, test_feature, database_feature, test_label, database_label):
+def MAP_ARGV(sess, config, data, hash_code, test_feature, database_feature, test_label, database_label, label='second'):
 
 	# test_feature = np.asarray(test_feature)
 	# database_feature = np.asarray(database_feature)
@@ -70,7 +70,7 @@ def MAP_ARGV(sess, config, data, hash_code, test_feature, database_feature, test
 
 	filename = 'result/test_map_' + str(config['parameters']['dim_out']) + '.txt'
 	fp = open(filename,"a")
-	fp.write(str(res)+"\n")
+	fp.write(label+str(res)+"\n")
 	fp.close()
 	
 	return np.mean([a for a in res.values()])

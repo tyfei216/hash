@@ -27,7 +27,7 @@ if __name__ == '__main__':
     config.read(args.cfg)
 
     encoder = model.Encoder(config)
-    generator = model.Generator(config) 
+    generator = model.VideoGenerator3D(384, 1) 
     discriminator = model.Discriminator(config)
     if args.gpu:
         encoder = encoder.cuda()

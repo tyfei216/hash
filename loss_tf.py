@@ -38,8 +38,9 @@ def GANloss(config, reallabel, fakelabel, source_logits_real, hash_logits_real, 
 
     g_loss = 0.0
     d_loss = 0.0
-    ones = tf.ones_like(source_logits_real['img'])
-    zeros = tf.zeros_like(source_logits_real['img'])
+    for m in source_logits_real.keys():
+        ones = tf.ones_like(source_logits_real[m])
+        zeros = tf.zeros_like(source_logits_real[m])
 
     for m in source_logits_real.keys():
         source_loss_real = tf.reduce_mean(

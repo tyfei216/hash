@@ -15,11 +15,12 @@ def args_parse():
     parser.add_argument('-gpuid', type=int, default=-1, help='given gpu to train on')
     parser.add_argument('-gpu', type=bool, default=False, help='whether to use a gpu')
     parser.add_argument('-save', type=str, default='./checkpoints/try/', help='place to save')
+    parser.add_argument('-label', type=str, default='default', help='label for result')
     args = parser.parse_args()
     
     
     checkpoint_path = args.save	
-    checkpoint_path = os.path.join(checkpoint_path, '{name}-{net}.pth')
+    checkpoint_path = os.path.join(checkpoint_path, '{label}-{name}-{net}.pth')
 
     if args.gpuid >= 0:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpuid)
@@ -124,13 +125,14 @@ if __name__ == '__main__':
                     lr_step, train_list[m], epoch*int(config['train']['d_epoch']) + d_epoch, m)
 
         if (epoch + 1) % int(config['train']['print']) == 0:
-            test_map = MAP_ARGV(sess, config, posdata, hash_code_pos, test_feature, database_feature, test_label, database_label)
+            test_map = MAP_ARGV(sess, config, posdata, hash_code_pos, test_feature, database_feature, test_label, database_label, args.label)
             print(test_map)
             if test_map > map_best_val:
+                print("save model")
                 map_best_val = test_map
-                saver.save(sess, checkpoint_path.format(net='encoder', name='best'))
+                saver.save(sess, checkpoint_path.format(label=args.label, net='encoder', name='best'))
 
-        if (epoch + 1) % int(config['train']['save_epoch']) == 0:
-            saver.save(sess, checkpoint_path.format(net='encoder', name=str(epoch+1)))
+        #if (epoch + 1) % int(config['train']['save_epoch']) == 0:
+        #    saver.save(sess, checkpoint_path.format(label=args.label, net='encoder', name=str(epoch+1)))
     
     sess.close()
