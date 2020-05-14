@@ -97,6 +97,7 @@ if __name__ == '__main__':
     posdata, negdata, loss, update, hash_code_pos, hash_code_neg = init_network(config, lr_step)
     weight = model_tf.compute_regulation(float(config['train']['weight_decay']), 'encoder')
     test_feature,database_feature,test_label,database_label,train_feature,knn_idx = dataset_tf.xmedia(config)
+    #test_feature,database_feature,test_label,database_label,train_feature,knn_idx = dataset_tf.wiki(config)
 
     cf = tf.ConfigProto(allow_soft_placement=True)
     cf.gpu_options.allow_growth = True

@@ -49,17 +49,17 @@ def GANloss(config, reallabel, fakelabel, source_logits_real, hash_logits_real, 
 
         source_loss_fake = tf.reduce_mean(
             tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=source_logits_fake[m], labels=zeros))
+                logits=source_logits_fake[m[0:3]], labels=zeros))
 
         hash_loss_gen = tf.reduce_mean(
             tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=source_logits_fake[m], labels=ones))
+                logits=source_logits_fake[m[0:3]], labels=ones))
 
         hash_loss_real = tf.reduce_mean(
             tf.nn.sigmoid_cross_entropy_with_logits(logits=hash_logits_real[m],
                                                     labels=reallabel))
         hash_loss_fake = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=hash_logits_fake[m],
+            tf.nn.sigmoid_cross_entropy_with_logits(logits=hash_logits_fake[m[0:3]],
                                                     labels=fakelabel))
 
         d_loss += float(config['parameters']['dim_out'])*(source_loss_real + source_loss_fake) + hash_loss_real + hash_loss_fake

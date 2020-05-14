@@ -76,8 +76,8 @@ class Encoder():
         return weight_decay * result
 '''
 
-def build_layer(x, out_dim, scope = 'fc'):
-    with tf.variable_scope(scope):
+def build_layer(x, out_dim, scope = 'fc', reuse=False):
+    with tf.variable_scope(scope, reuse = reuse):
         w = tf.get_variable(
             'w', [x.get_shape()[-1], out_dim],
             initializer=tf.truncated_normal_initializer(stddev=0.1))
@@ -102,43 +102,68 @@ def Encoder(config, feature, reuse = False):
         hash_sig = {}
         hash_code = {}
         for m in config['modals'].keys():
-            l1 = tf.nn.tanh(build_layer(feature[m], int(config['parameters']['dim_hid']), 'fc1'+m))
-            hash_sig[m] = tf.sigmoid(build_layer(l1, int(config['parameters']['dim_out']), 'fc2'+m))
+            l1 = tf.nn.tanh(build_layer(feature[m], int(config['parameters']['dim_hid']), 'fc1'+m, reuse))
+            hash_sig[m] = tf.sigmoid(build_layer(l1, int(config['parameters']['dim_out']), 'fc2'+m, reuse))
             hash_code[m] = tf.cast(hash_sig[m] + 0.5, tf.int32)
 
     return hash_sig, hash_code
 
-def Encoder_new(config, feature, reuse = False):
-    with tf.variable_scope('encoder', reuse = reuse,):  
+def Encoder_new(config, feature, reuse = True):
+    with tf.variable_scope('encoder'):  
         # regularizer=tf.contrib.layers.l2_regularizer(0.1)):
         hash_sig = {}
         hash_code = {}
-        for m in config['modals'].keys():
-            l0 = tf.nn.relu(build_layer(feature[m], int(config['modals'][m]), 'fc0'+m))
-            l1 = tf.nn.tanh(build_layer(l0, int(config['parameters']['dim_hid']), 'fc1'+m))
-            hash_sig[m] = tf.sigmoid(build_layer(l1, int(config['parameters']['dim_out']), 'fc2'+m))
+        defined = []
+        for m in feature.keys():
+            print(m)
+            if m[0:3] in defined:
+                r = True
+            else:
+                r = reuse
+                defined.append(m[0:3])
+            l1 = tf.nn.tanh(build_layer(feature[m], int(config['parameters']['dim_hid']), 'fc1'+m[0:3], r))
+            hash_sig[m] = tf.sigmoid(build_layer(l1, int(config['parameters']['dim_out']), 'fc2'+m[0:3], r))
             hash_code[m] = tf.cast(hash_sig[m] + 0.5, tf.int32)
 
     return hash_sig, hash_code
+
 
 def Generator(config, hash_code, z, reuse = False):
     with tf.variable_scope('generator', reuse=reuse):
         generated_feature = {}
         for m in config['modals'].keys():
             z_labels = tf.concat([hash_code, z], 1)
-            first = tf.nn.relu(build_layer(z_labels, int(config['parameters']['dim_out'])*4, 'fc1'+m))
-            second = tf.nn.relu(build_layer(first, int(config['parameters']['dim_hid']), 'fc2'+m))
-            generated_feature[m] = tf.nn.tanh(build_layer(second, int(config['modals'][m]), 'fc3'+m))
+            first = tf.nn.relu(build_layer(z_labels, int(config['parameters']['dim_out'])*4, 'fc1'+m, reuse))
+            second = tf.nn.relu(build_layer(first, int(config['parameters']['dim_hid']), 'fc2'+m, reuse))
+            generated_feature[m] = tf.nn.tanh(build_layer(second, int(config['modals'][m]), 'fc3'+m, reuse))
     
     return generated_feature
 
-def Discriminator(config, feature, reuse = False):
+def Discriminator(config, feature, reuse = True):
     with tf.variable_scope('discriminator', reuse=reuse):
         source_logits = {}
         hash_logits = {}
         for m in config['modals'].keys():
-            first = tf.nn.relu(build_layer(feature[m], int(config['parameters']['dim_hid']), 'fc1'+m))
-            second = tf.nn.relu(build_layer(first, int(config['parameters']['dim_hid'])//4, 'fc2'+m))
-            source_logits[m] = build_layer(second, 1, 'sl'+m)
-            hash_logits[m] = build_layer(second, int(config['parameters']['dim_out']), 'cl'+m)
+            first = tf.nn.relu(build_layer(feature[m], int(config['parameters']['dim_hid']), 'fc1'+m, reuse))
+            second = tf.nn.relu(build_layer(first, int(config['parameters']['dim_hid'])//4, 'fc2'+m, reuse))
+            source_logits[m] = build_layer(second, 1, 'sl'+m, reuse)
+            hash_logits[m] = build_layer(second, int(config['parameters']['dim_out']), 'cl'+m, reuse)
+    return source_logits, hash_logits
+
+def Discriminator_new(config, feature, reuse = True):
+    with tf.variable_scope('discriminator'):
+        source_logits = {}
+        hash_logits = {}
+        defined = []
+        for m in feature.keys():
+            if m[0:3] in defined:
+                r = True
+            else:
+                r = reuse
+                defined.append(m[0:3])
+            first = tf.nn.relu(build_layer(feature[m], int(config['parameters']['dim_hid']), 'fc1'+m[0:3], r))
+            second = tf.nn.relu(build_layer(first, int(config['parameters']['dim_hid'])//4, 'fc2'+m[0:3], r))
+            source_logits[m] = build_layer(second, 1, 'sl'+m[0:3], r)
+            hash_logits[m] = build_layer(second, int(config['parameters']['dim_out']), 'cl'+m[0:3], r)
     return source_logits, hash_logits        
+       
